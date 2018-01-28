@@ -26,6 +26,7 @@ class DataParser(object):
                         image_mask_pairs_filepath,
                         contours_type='i-contours',
                         logs_prefix='_logs',
+                        plots_prefix='_plots',
                         visualize_contours=True):
 
         self.images_dirpath = images_dirpath
@@ -34,6 +35,7 @@ class DataParser(object):
         self.data_prefix = data_prefix
         self.contours_type = contours_type
         self.logs_prefix = logs_prefix
+        self.plots_prefix = plots_prefix
         self.visualize_contours = visualize_contours
 
         self.dicoms_prefix = os.path.join(data_prefix, 'dicoms')
@@ -50,7 +52,7 @@ class DataParser(object):
 
         file_handler = logging.FileHandler(os.path.join(self.logs_prefix,
                                                             '{}-data-parser.log'.format(self.contours_type)))
-        file_handler.setLevel(logging.WARNING)
+        file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
 
         stream_handler = logging.StreamHandler()
@@ -255,9 +257,9 @@ class DataParser(object):
                 # for visual debugging purposes also create an image for each of the first 10 pairs
                 # where the image and mask are merged together to see if everything is ok.
                 if self.visualize_contours and idx < 5:
-                    mask_overlay_path = os.path.join(self.logs_prefix,
+                    mask_overlay_path = os.path.join(self.plots_prefix,
                                                      '{}-mask-overlay-{}.jpg'.format(self.contours_type, idx))
-                    contour_overlay_path = os.path.join(self.logs_prefix,
+                    contour_overlay_path = os.path.join(self.plots_prefix,
                                                         '{}-overlay-{}.jpg'.format(self.contours_type, idx))
                     self._visualize_mask_overlay(img, mask, mask_overlay_path)
                     self._visualize_contour_overlay(img, contour, contour_overlay_path)
@@ -270,9 +272,9 @@ class DataParser(object):
             parsed numpy images: {imgs_path}
             parsed numpy masks: {masks_path}
             images-contours pairs file: {img_contour_pairs_file}
-            visualizing contours and masks figures: {logs_dir}/*.jpg
+            visualizing contours and masks figures: {plots_prefix}/*.jpg
         '''.format(
             imgs_path=self.images_dirpath,
             masks_path=self.masks_dirpath,
             img_contour_pairs_file=self.image_mask_pairs_filepath,
-            logs_dir=self.logs_prefix))
+            plots_prefix=self.plots_prefix))
