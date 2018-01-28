@@ -1,0 +1,23 @@
+INFO:2018-01-28 07:58:17,940:data_parser:Parsing dicom and contours files started ...
+INFO:2018-01-28 07:58:19,936:data_parser:Parsing ended successfully after: 1.99574685097 seconds
+DEBUG:2018-01-28 07:58:19,936:data_parser:Please refer to the followings output file and folders:
+            parsed numpy images: _data/images-i-contours
+            parsed numpy masks: _data/masks-i-contours
+            images-contours pairs file: _data/image-mask-pairs-i-contours.csv
+            visualizing contours and masks figures: _plots/*.jpg
+        
+INFO:2018-01-28 09:51:43,883:data_parser:Parsing dicom and contours files started ...
+INFO:2018-01-28 09:51:46,075:data_parser:Parsing ended successfully after: 2.19173407555 seconds
+DEBUG:2018-01-28 09:51:46,075:data_parser:Please refer to the followings output file and folders:
+            parsed numpy images: _data/images-i-contours
+            parsed numpy masks: _data/masks-i-contours
+            images-contours pairs file: _data/image-mask-pairs-i-contours.csv
+            visualizing contours and masks figures: _plots/*.jpg
+INFO:2018-01-28 11:37:12,278:data_parser:Parsing dicom and contours files started ...
+INFO:2018-01-28 11:37:14,437:data_parser:Parsing ended successfully after: 2.15938782692 seconds
+DEBUG:2018-01-28 11:37:14 ,437:data_parser:Please refer to the followings output file and folders:
+            parsed numpy images: _data/images-i-contours
+            parsed numpy masks: _data/masks-i-contours
+            images-contours pairs file: _data/image-mask-pairs-i-contours.csv
+            visualizing contours and masks figures: _plots/*.jpg
+        
