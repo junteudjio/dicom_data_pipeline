@@ -260,12 +260,12 @@ class DataParser(object):
                 img = DataParser._parse_dicom_file(dcm_path)
                 contour = DataParser._parse_contour_file(contour_path)
                 mask = DataParser._poly_to_mask(contour, img.shape[0], img.shape[1])
-            except InvalidDicomError as e:
-                self._log_error(e, DataParser._parse_dicom_file.__name__, dcm_path=dcm_path)
-            except DataParser.InvalidContourError as e:
-                self._log_error(e, DataParser._parse_contour_file.__name__, contour_path=contour_path)
-            except Exception as e:
-                self._log_error(e, dcm_path=dcm_path, contour_path=contour_path)
+            except InvalidDicomError:
+                self.logger.error('Error loading dicom file: {}'.format(dcm_path), exc_info=True)
+            except DataParser.InvalidContourError:
+                self.logger.error('Error loading contour file: {}'.format(contour_path), exc_info=True)
+            except Exception:
+                self.logger.error('Something went wrong: ', exc_info=True)
             else:
                 # save the img to the disk
                 img_path = os.path.join(self.images_dirpath, '{}.npy'.format(idx))
