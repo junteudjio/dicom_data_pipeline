@@ -1,6 +1,6 @@
-food_classifier/_data/
-food_classifier/_plots/
-food_classifier/_logs/
+dicom_data_pipeline/_data/
+dicom_data_pipeline/_plots/
+dicom_data_pipeline/_logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
