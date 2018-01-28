@@ -43,5 +43,6 @@ class TestDataParser(unittest.TestCase):
 
         self.assertEqual(mask.shape, img.shape)
         self.assertEqual(mask.dtype, np.bool)
+
 if __name__ == '__main__':
     unittest.main()

@@ -3,10 +3,23 @@
 '''
 import linecache
 
+import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
 __author__ = 'Junior Teudjio'
+__all__ = ['DicomMaskPairsDataset', 'DataLoaderFactory', 'to_tensor', 'to_ndarray']
+
+
+def to_tensor(sample):
+    img, mask = sample['img'], sample['mask']
+    return {'img': torch.from_numpy(img),
+            'mask': torch.from_numpy(mask.astype(np.uint8))}
+
+def to_ndarray(sample):
+    img, mask = sample['img'], sample['mask']
+    return {'img': img.numpy(),
+            'mask': mask.numpy().astype(np.bool)}
 
 class DicomMaskPairsDataset(Dataset):
     ''' Dicom & mask images dataset.'''
@@ -18,8 +31,8 @@ class DicomMaskPairsDataset(Dataset):
         ----------
         pairs_filepath: basestring
             Path of the file where are saved a pair of image,mask paths per line.
-        transform: list of functions or None
-            A sequence of transformations to apply to a training sample.
+        transform: callable or None
+            A transformation to apply to a training sample.
             Each sample being: a dict(image, mask).
             An example of  function can be a conversion from numpy array to Pytorch/Keras/Tensorflow/... tensors.
         '''
@@ -55,17 +68,15 @@ class DicomMaskPairsDataset(Dataset):
 
 class DataLoaderFactory(object):
     @staticmethod
-    def get_data_loader(pairs_filepath, transform=None, batch_size=8, shuffle=True, num_workers=1):
+    def get_data_loader(pairs_filepath, tensor_or_ndarray='ndarray', batch_size=8, shuffle=True, num_workers=1):
         '''
         Encasulate the creation of the Pytorch Dataset object and then the DataLoader object given the parameters.
         Parameters
         ----------
         pairs_filepath: basestring
             Path of the file where are saved a pair of image,mask paths per line.
-        transform: list of functions or None
-            A sequence of transformations to apply to a training sample.
-            Each sample being: a dict(image, mask).
-            An example of function can be a conversion from numpy array to Pytorch/Keras/Tensorflow/... tensors.
+        tensor_or_ndarray: basestring
+           Decides to return a torch tensor or a numpy ndarray: values to choose between ndarray and tensor
         batch_size: int
             The number of samples per batch
         shuffle: bool
@@ -76,17 +87,22 @@ class DataLoaderFactory(object):
         Returns
         -------
         data_loader: DataLoader
+             which generates either Torch Tensors or numpy ndarrays per batch
+             depending of the value of tensor_or_ndarray.
         '''
 
         # first instantiate the dataset object
-        dicom_mask_dataset = DicomMaskPairsDataset(pairs_filepath=pairs_filepath, transform=transform)
+        dicom_mask_dataset = DicomMaskPairsDataset(pairs_filepath=pairs_filepath, transform=to_tensor)
 
         # now create the data_loader object
         data_loader = DataLoader(
             dataset=dicom_mask_dataset,
             batch_size=batch_size,
             shuffle=shuffle,
-            num_workers=num_workers
+            num_workers=num_workers,
         )
+
+        if tensor_or_ndarray == 'ndarray':
+            data_loader = (to_ndarray(sample) for sample in data_loader)
 
         return data_loader
