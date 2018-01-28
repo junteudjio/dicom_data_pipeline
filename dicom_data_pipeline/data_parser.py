@@ -28,7 +28,27 @@ class DataParser(object):
                         logs_prefix='_logs',
                         plots_prefix='_plots',
                         visualize_contours=True):
-
+        '''
+        Create a data_parser
+        Parameters
+        ----------
+        data_prefix: basestring
+            Parent directory where all the data for the program are saved.
+        images_dirpath: basestring
+            Path of the directory where to save the parsed dicom images.
+        masks_dirpath: basestring
+            Path of the directory where to save the parsed contours.
+        image_mask_pairs_filepath: basestring
+            Path of the file where to specify a pair of image,mask paths per line.
+        contours_type: basestring
+            Determine if we are using i-contours or o-contours.
+        logs_prefix: basestring
+            Parent directory where to log files are saved.
+        plots_prefix: basestring
+            Parent directory where the visualization debugging plots are saved.
+        visualize_contours: bool
+            Decided if we should saved visualization debugging plots.
+        '''
         self.images_dirpath = images_dirpath
         self.masks_dirpath = masks_dirpath
         self.image_mask_pairs_filepath = image_mask_pairs_filepath
@@ -93,7 +113,8 @@ class DataParser(object):
                             msg='No mathing dicom file for contour file: {}'.format(contour_path)
                         )
 
-    def _visualize_mask_overlay(self, img, mask, savepath):
+    @staticmethod
+    def _visualize_mask_overlay(img, mask, savepath):
         '''
         Merge the img and mask in a single figure and save to disk
         Parameters
@@ -113,7 +134,8 @@ class DataParser(object):
         plt.imshow(mask, alpha=0.5)
         fig.savefig(savepath)
 
-    def _visualize_contour_overlay(self, img, contour, savepath):
+    @staticmethod
+    def _visualize_contour_overlay(img, contour, savepath):
         '''
         Merge the img and contour points in a single figure and save to disk
         Parameters
@@ -261,8 +283,8 @@ class DataParser(object):
                                                      '{}-mask-overlay-{}.jpg'.format(self.contours_type, idx))
                     contour_overlay_path = os.path.join(self.plots_prefix,
                                                         '{}-overlay-{}.jpg'.format(self.contours_type, idx))
-                    self._visualize_mask_overlay(img, mask, mask_overlay_path)
-                    self._visualize_contour_overlay(img, contour, contour_overlay_path)
+                    DataParser._visualize_mask_overlay(img, mask, mask_overlay_path)
+                    DataParser._visualize_contour_overlay(img, contour, contour_overlay_path)
 
         outfile.close()
 
