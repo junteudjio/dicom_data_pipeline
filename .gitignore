@@ -1,6 +1,8 @@
-dicom_data_pipeline/_data/
-dicom_data_pipeline/_plots/
-dicom_data_pipeline/_logs/
+dicom_data_pipeline/_data/contourfiles/
+dicom_data_pipeline/_data/dicoms/
+dicom_data_pipeline/_data/link.csv
+#dicom_data_pipeline/_plots/
+#dicom_data_pipeline/_logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
