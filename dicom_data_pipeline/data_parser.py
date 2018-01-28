@@ -180,9 +180,8 @@ class DataParser(object):
                 coords_lst.append((x_coord, y_coord))
         
         if len(coords_lst) < 3:
-            raise DataParser.InvalidContourError('Invalid contour file:{} , less than 3 contours: {}'.format(
-                filepath, len(coords_lst)
-            ))
+            raise DataParser.InvalidContourError('''Invalid contour file:{}
+             cannot create a contour with less than 3 points: only {} points'''.format(filepath, len(coords_lst)))
         return coords_lst
 
     @staticmethod
@@ -197,7 +196,7 @@ class DataParser(object):
 
         Returns
         -------
-        numpy array or None
+        numpy array
 
         '''
         try:
