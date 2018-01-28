@@ -30,6 +30,12 @@ in a separate file : dicom_data_pipeline/_data/image-mask-pairs-i-contours.csv .
 - Also, very important by plotting few images of the merged(dicom + mask) to see if they correspond during data_parsing.
 - The images for visual "debugging" are saved in the directory:  dicom_data_pipeline/dicom_data_pipeline/_plots .
 
+<p align="center"><img width="65%" src="dicom_data_pipeline/_plots/i-contours-mask-overlay-0.jpg" /></p>
+FIGURE: Image generated during the parsing phase: boolean mask overlay on dicom image.
+
+<p align="center"><img width="65%" src="dicom_data_pipeline/_plots/i-contours-overlay-0.jpg" /></p>
+FIGURE: Image generated during the parsing phase: float contours points overlay on dicom image.
+
 ### What changes did you make to the code, if any, in order to integrate it into our production code base?
 
 - Added InvalidContourError Exception to parse_contour_file to make sure that a contour has at least 3 points.
