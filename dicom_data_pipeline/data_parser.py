@@ -1,4 +1,4 @@
-'''DataParser to get numpy arrays (image, mask) pairs from dicoms and contours files'''
+'''DataParser to get numpy arrays (image, mask-1, mask-2) samples from dicoms and contours files'''
 import os
 import csv
 import glob
@@ -20,11 +20,13 @@ class DataParser(object):
         '''Exception raised when a contour is strictly less than 3 distinct points'''
         pass
 
+    _plots_colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', 'w']
+
     def __init__(self,  data_prefix,
                         images_dirpath,
                         masks_dirpath,
-                        image_mask_pairs_filepath,
-                        contours_type='i-contours',
+                        img_masks_filepath,
+                        contours_type='i-contours.o-contours',
                         logs_prefix='_logs',
                         plots_prefix='_plots',
                         visualize_contours=True):
@@ -38,10 +40,12 @@ class DataParser(object):
             Path of the directory where to save the parsed dicom images.
         masks_dirpath: basestring
             Path of the directory where to save the parsed contours.
-        image_mask_pairs_filepath: basestring
+        img_masks_filepath: basestring
             Path of the file where to specify a pair of image,mask paths per line.
         contours_type: basestring
-            Determine if we are using i-contours or o-contours.
+            Type of contour(s) to handle:
+             eg:  i-contours (for single contours)
+             eg: i-contours.o-contours (for multiple contours)
         logs_prefix: basestring
             Parent directory where to log files are saved.
         plots_prefix: basestring
@@ -51,7 +55,7 @@ class DataParser(object):
         '''
         self.images_dirpath = images_dirpath
         self.masks_dirpath = masks_dirpath
-        self.image_mask_pairs_filepath = image_mask_pairs_filepath
+        self.img_masks_filepath = img_masks_filepath
         self.data_prefix = data_prefix
         self.contours_type = contours_type
         self.logs_prefix = logs_prefix
@@ -61,6 +65,9 @@ class DataParser(object):
         self.dicoms_prefix = os.path.join(data_prefix, 'dicoms')
         self.contours_prefix = os.path.join(data_prefix, 'contourfiles')
         self.links_filepath = os.path.join(data_prefix, 'link.csv')
+
+        self.parse_outfile_headers = ['img']
+        self.parse_outfile_headers.extend(self.contours_type.split('.'))
 
         self._set_logger()
 
@@ -90,37 +97,48 @@ class DataParser(object):
             kwargs: {}
         '''.format(repr(e), str(args), str(kwargs)))
 
-    def _get_dicoms_contours_pairs_paths(self):
+    def _get_dicoms_contours_paths(self):
         with open(self.links_filepath, 'rb') as csvfile:
             reader = csv.DictReader(csvfile, fieldnames=['patient_id', 'original_id'])
             next(reader)
             for row in reader:
+                # first we find the images indices for which we have all contours types.
                 imgs_dir = os.path.join(self.dicoms_prefix, row['patient_id'])
-                contours_dir = os.path.join(self.contours_prefix, row['original_id'], self.contours_type)
+                imgs_filenames = os.listdir(imgs_dir)
+                imgs_indices_set = set([ int(name.split('.')[0]) for name in imgs_filenames ])
 
-                contours_paths = glob.glob(os.path.join(contours_dir, '*-manual.txt'))
-                contour_filenames = (path.split('/')[-1] for path in contours_paths)
-                contours_indices = (int(name.split('-')[2]) for name in contour_filenames)
+                contours_dirs = []
+                contours_indices_sets = []
+                for contour_type in self.contours_type.split('.'):
+                    contours_dir = os.path.join(self.contours_prefix, row['original_id'], contour_type)
+                    contours_dirs.append(contours_dir)
+                    contours_filenames = os.listdir(contours_dir)
+                    contours_indices_set = set([int(name.split('-')[2]) for name in contours_filenames ])
+                    contours_indices_sets.append(contours_indices_set)
+                # valid_imgs_indices: list of images indices having all types of contours
+                valid_imgs_indices = set.intersection(imgs_indices_set, *contours_indices_sets)
+                if len(valid_imgs_indices) == 0: continue
 
-                for contour_idx, contour_path in itertools.izip(contours_indices, contours_paths):
-                    # check if there is a matching dicom file for this contour index
-                    imgs_paths = glob.glob(os.path.join(imgs_dir, '{}.dcm'.format(contour_idx)))
+                # yield valid images paths and their contours
+                for valid_img_idx in valid_imgs_indices:
+                    valid_img_path = glob.glob(os.path.join(imgs_dir, '{}.dcm'.format(valid_img_idx)))[0]
+                    valid_contours_paths = []
+                    contour_file_regex = '*{:04d}*'.format(valid_img_idx)
+                    for contours_dir in contours_dirs:
+                        valid_contour_path = glob.glob(os.path.join(contours_dir, contour_file_regex))[0]
+                        valid_contours_paths.append(valid_contour_path)
 
-                    if len(imgs_paths) == 1:
-                        yield imgs_paths[0], contour_path
-                    else:
-                        self.logger.warning(
-                            msg='No mathing dicom file for contour file: {}'.format(contour_path)
-                        )
+                    yield valid_img_path, valid_contours_paths
+
 
     @staticmethod
-    def _visualize_mask_overlay(img, mask, savepath):
+    def _visualize_mask_overlay(img, masks, savepath):
         '''
         Merge the img and mask in a single figure and save to disk
         Parameters
         ----------
         img: numpy array
-        mask: numpy array
+        masks: list of numpy array
         savepath: basestring
             path to disk where to save the merged figure.
 
@@ -131,17 +149,18 @@ class DataParser(object):
         plt.clf()
         fig = plt.figure()
         plt.imshow(img)
-        plt.imshow(mask, alpha=0.5)
+        for idx, mask in enumerate(masks):
+            plt.imshow(mask, alpha=0.5)
         fig.savefig(savepath)
 
     @staticmethod
-    def _visualize_contour_overlay(img, contour, savepath):
+    def _visualize_contour_overlay(img, contours, savepath):
         '''
         Merge the img and contour points in a single figure and save to disk
         Parameters
         ----------
         img: numpy array
-        contour: list of 2D tuples
+        contours: list of list of 2D tuples
         savepath: basestring
             path to disk where to save the merged figure.
 
@@ -152,9 +171,11 @@ class DataParser(object):
         plt.clf()
         fig = plt.figure()
         plt.imshow(img)
-        x = [point[0] for point in contour]
-        y = [point[1] for point in contour]
-        plt.plot(x, y, alpha=1, color='r')
+        for idx, contour in enumerate(contours):
+            x = [point[0] for point in contour]
+            y = [point[1] for point in contour]
+            color = DataParser._plots_colors[idx % len(DataParser._plots_colors)]
+            plt.plot(x, y, alpha=1, color=color)
         fig.savefig(savepath)
 
     @staticmethod
@@ -178,7 +199,7 @@ class DataParser(object):
                 x_coord = float(coords[0])
                 y_coord = float(coords[1])
                 coords_lst.append((x_coord, y_coord))
-        
+
         if len(coords_lst) < 3:
             raise DataParser.InvalidContourError('''Invalid contour file:{}
              cannot create a contour with less than 3 points: only {} points'''.format(filepath, len(coords_lst)))
@@ -252,13 +273,21 @@ class DataParser(object):
         start = time.time()
         self.logger.info('Parsing dicom and contours files started ...')
 
-        outfile = open(self.image_mask_pairs_filepath, 'w')
-        dcms_contours_paths = self._get_dicoms_contours_pairs_paths()
-        for idx, (dcm_path, contour_path) in enumerate(dcms_contours_paths):
+        outfile = open(self.img_masks_filepath, 'w')
+        # write header line
+        header_line = ' '.join(self.parse_outfile_headers)
+        outfile.write('{}\n'.format(header_line))
+
+        dcm_contours_paths = list(self._get_dicoms_contours_paths())
+        for idx, (dcm_path, contour_paths) in enumerate(dcm_contours_paths):
             try:
                 img = DataParser._parse_dicom_file(dcm_path)
-                contour = DataParser._parse_contour_file(contour_path)
-                mask = DataParser._poly_to_mask(contour, img.shape[0], img.shape[1])
+                contours, masks = [], []
+                for contour_path in contour_paths:
+                    contour = DataParser._parse_contour_file(contour_path)
+                    mask = DataParser._poly_to_mask(contour, img.shape[0], img.shape[1])
+                    contours.append(contour)
+                    masks.append(mask)
             except InvalidDicomError:
                 self.logger.error('Error loading dicom file: {}'.format(dcm_path), exc_info=True)
             except DataParser.InvalidContourError:
@@ -266,24 +295,32 @@ class DataParser(object):
             except Exception:
                 self.logger.error('Something went wrong: ', exc_info=True)
             else:
+                # list accumulator for img-path and mask-1-path, mask-2-path, etc...
+                sample_line = []
+
                 # save the img to the disk
                 img_path = os.path.join(self.images_dirpath, '{}.npy'.format(idx))
-                mask_path = os.path.join(self.masks_dirpath, '{}.npy'.format(idx))
+                sample_line.append(img_path)
                 np.save(img_path, img)
-                np.save(mask_path, mask)
 
-                # save their paths pairs to file
-                outfile.write('{img_path} {mask_path}\n'.format(img_path=img_path, mask_path=mask_path))
+                for contour_type, mask in itertools.izip(self.contours_type.split('.'), masks):
+                    mask_path = os.path.join(self.masks_dirpath, '{}.{}.npy'.format(idx, contour_type))
+                    sample_line.append(mask_path)
+                    np.save(mask_path, mask)
 
-                # for visual debugging purposes also create an image for each of the first 10 pairs
+                # save their paths  to file
+                sample_line = ' '.join(sample_line)
+                outfile.write('{}\n'.format(sample_line))
+
+                # for visual debugging purposes also create an image for each of the first 10
                 # where the image and mask are merged together to see if everything is ok.
                 if self.visualize_contours and idx < 5:
                     mask_overlay_path = os.path.join(self.plots_prefix,
-                                                     '{}-mask-overlay-{}.jpg'.format(self.contours_type, idx))
+                                                     '{}.mask_overlay.{}.jpg'.format(self.contours_type, idx))
                     contour_overlay_path = os.path.join(self.plots_prefix,
-                                                        '{}-overlay-{}.jpg'.format(self.contours_type, idx))
-                    DataParser._visualize_mask_overlay(img, mask, mask_overlay_path)
-                    DataParser._visualize_contour_overlay(img, contour, contour_overlay_path)
+                                                        '{}.contour_overlay.{}.jpg'.format(self.contours_type, idx))
+                    DataParser._visualize_mask_overlay(img, masks, mask_overlay_path)
+                    DataParser._visualize_contour_overlay(img, contours, contour_overlay_path)
 
         outfile.close()
 
@@ -292,10 +329,10 @@ class DataParser(object):
         self.logger.debug('''Please refer to the followings output file and folders:
             parsed numpy images: {imgs_path}
             parsed numpy masks: {masks_path}
-            images-contours pairs file: {img_contour_pairs_file}
+            images-contours  file: {img_masks_filepath}
             visualizing contours and masks figures: {plots_prefix}/*.jpg
         '''.format(
             imgs_path=self.images_dirpath,
             masks_path=self.masks_dirpath,
-            img_contour_pairs_file=self.image_mask_pairs_filepath,
+            img_masks_filepath=self.img_masks_filepath,
             plots_prefix=self.plots_prefix))
