@@ -24,4 +24,3 @@ mkdir -p $PLOTS_DIR
 mkdir -p $LOGS_DIR
 #mkdir -p $MODEL_CKPTS_DIR
 mkdir -p $TEST_LOGS_DIR
-
